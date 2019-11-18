@@ -83,15 +83,19 @@ Mat get_cropped(Mat input, Rect rectangle , int crop_size , int style){
 }
 
 
-int main(){
-
+int main(int argc, char **argv){
+    if (argc != 2)
+    {
+       cout << "Wrong uses::" << endl << "exe path" << endl ; exit(1);
+    }
     FaceDetectionClass FaceDetection;
     FaceDetection.initialize();
     FaceRecognitionClass FaceRecognition;
 
 
 //------------------reading images of people---------------------------------
-    string directory_path="raw_photos";
+    //string directory_path="raw_photos";
+    string directory_path= argv[1];
     std::map<string, vector <string>> photo_info;  //key: class name //value: image paths
     vector <string> input_names;
     cout << "Parsing Directory: " << directory_path << endl;

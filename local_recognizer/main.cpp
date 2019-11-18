@@ -1,5 +1,4 @@
-/*
- * Copyright 2017 Intel Corporation All Rights Reserved. 
+/** Copyright 2017 Intel Corporation All Rights Reserved. 
  * 
  * The source code contained or described herein and all documents related to the 
  * source code ("Material") are owned by Intel Corporation or its suppliers or 
@@ -84,10 +83,10 @@ Mat get_cropped(Mat input, Rect rectangle , int crop_size , int style){
     return r;
 }
 
-vector<pair<string, vector<float> > > read_text(){
-    cout<< "Reading vectors of saved person"<<endl;
+vector<pair<string, vector<float> > > read_text(string file){
+    cout<< "Reading vectors of saved person:"<<file << endl;
     vector<pair<string, vector<float> > > data;
-    string file="vectors.txt";
+    //string file="vectors.txt";
     string line;
     std::ifstream infile(file);
     int count;
@@ -127,11 +126,19 @@ float calculate_dist(std::vector<float> v1, std::vector<float> v2, int len){
     return sqrt(sum);
 }
 
-pair<float , string> recognize(vector<pair<string, vector<float> > > *data , vector <float> target){
+pair<float , string> recognize(vector<pair<string, vector<float> > > *data ,vector<pair<string, vector<float> > > *d_data, vector <float> target){
     float dist=3.0;
     float min_value=3.0;
     string best_match="Unknown";
     for (auto entry : *(data)){
+        dist=calculate_dist(target , entry.second , 512);
+        if (dist < min_value){
+            min_value=dist;
+            best_match=entry.first;
+        } 
+    }
+
+    for (auto entry : *(d_data)){
         dist=calculate_dist(target , entry.second , 512);
         if (dist < min_value){
             min_value=dist;
@@ -291,9 +298,15 @@ int main(int argc,  char **argv){
    cout << "uses:" << endl << "exe test.mp4" << endl;
    return 1;
  }
-//-----------------------Read data from "vectors.txt"----------------------
-    vector<pair<string, vector<float> > > data=read_text();
-    cout<< "Finished Reading"<<endl;
+//-----------------------Read data from "vectors.txt"---------------------
+    ofstream dynamic_output_file; 
+    dynamic_output_file.open("dynamic_vectors.txt", std::ofstream::trunc);
+    dynamic_output_file.close(); //incase this does not exist
+    vector<pair<string, vector<float> > > data=read_text("vectors.txt");
+    vector<pair<string, vector<float> > > d_data=read_text("dynamic_vectors.txt");
+    int dynamic_name_id = 1;
+    cout<< "Finished Reading >>"<< "vectors.txt:" << data.size() << " dynamic_vectors.txt:" << d_data.size()<< endl;
+
     FaceDetectionClass FaceDetection;
     FaceRecognitionClass FaceRecognition;
     //PersonDetectionClass PersonDetection;
@@ -446,12 +459,12 @@ int main(int argc,  char **argv){
         }
 
 
-
+        Mat detected_faces_frame = frame.clone();
         for (auto rect :detected_faces){
-          rectangle(frame, rect,Scalar(155,125,73), 2);         
+          rectangle(detected_faces_frame, rect,Scalar(155,125,73), 2);         
         }
-
         cout << "Detected face:" << detected_faces.size() << endl;
+
 //----------------------------------------face recognition--------------------------------------
         set<string> recognized_person;
         vector<float> output_vector;
@@ -466,21 +479,51 @@ int main(int argc,  char **argv){
             //cout << "do_infe done" << endl;
 
             //-------------compare with the dataset, return the most possible person if any---
-            compare_result=recognize(&data , output_vector);
-            cout << "FaceRecognition:cheking for face:" << finx  << " : [compare_result]"<< compare_result.first << ":" <<  compare_result.second  << endl;
-            if (compare_result.second!="Unknown" 
-                && recognized_person.find(compare_result.second)==recognized_person.end())   {
+            compare_result=recognize(&data ,&d_data, output_vector);
+            cout << "FaceRecognition:Frame::" << fps << ":Facce:" << finx  << " : [compare_result]"<< compare_result.first << ":" <<  compare_result.second  << endl;
+            if (compare_result.second == "Unknown")
+            {
+                //close the vectors and add this add unknow face
+                //vector <float > output_vector;
+                ofstream dynamic_output_file; 
+                    //dynamic_output_file.open("dynamic_vectors.txt", std::ofstream::trunc);
+                dynamic_output_file.open("dynamic_vectors.txt", std::ofstream::out | std::ofstream::app);
+                if (!dynamic_output_file.is_open())
+                {
+                    cout<< "unable to open vectors.txt"<<endl;
+                    return -1;
+                }
+                string name = "ID"  + to_string(dynamic_name_id);
+                dynamic_output_file << name << "\n" << 1 << "\n";
+                for (auto element : output_vector){
+                    dynamic_output_file<< setprecision(4) << element << "\n" ;
+                }
+                dynamic_output_file.close();    
+                recognized_person.insert(name);
+                cout<< "Added to dynamic vectors::Frame::" << fps << ":Facce:" << finx << " : [compare_result]"<< compare_result.first << ":" <<  compare_result.second << " Newname:"<< name <<endl;
+                d_data = read_text("dynamic_vectors.txt");
+                cout<< "Finished Reading >>"<< "vectors.txt:" << data.size() << " dynamic_vectors.txt:" << d_data.size()<< endl;
+
+                const int dir_err = mkdir(("tmp/" + name).c_str() , S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                if (-1 == dir_err)
+                {
+                    cerr<<"Error creating directory! Either existing or no permission :: " << "tmp/" + name << endl;
+                    exit(1);
+                } 
+
+                imwrite("tmp/" + name + "/" + name + ".jpg",cropped);
+                dynamic_name_id++;
+            }
+
+            if (compare_result.second!="Unknown" && recognized_person.find(compare_result.second)==recognized_person.end())   {
                 recognized_person.insert(compare_result.second);
-                putText(frame, 
-                    "Name : " + compare_result.second , 
-                    cv::Point2f(rect.x,rect.y -15), 
+                putText(detected_faces_frame, "Name : " + compare_result.second , cv::Point2f(rect.x,rect.y -15), 
                     FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar(73,255,167), 1, LINE_AA); 
-                putText(frame, 
-                    "Value : " + to_string(compare_result.first) , 
-                    cv::Point2f(rect.x, rect.y ), 
+                putText(detected_faces_frame, "Value : " + to_string(compare_result.first) , cv::Point2f(rect.x, rect.y ), 
                     FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar(73,255,167), 1, LINE_AA);  
             }
-            imshow (" asdf", frame);
+            imshow ("detected_faces_frame", detected_faces_frame);
+            //imshow ("orig", frame);
             imshow ("recognising..", cropped);
             waitKey(1000);
 
@@ -524,7 +567,7 @@ int main(int argc,  char **argv){
         */
 
         imwrite("step5-2.jpg",frame);
-        imshow (" asdf", frame);
+        //imshow (" asdf", frame);
         waitKey(1);
 
 

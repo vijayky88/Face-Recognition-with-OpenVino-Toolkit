@@ -34,7 +34,9 @@ DEMOS_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 echo "Domo path=$DEMOS_PATH"
 #rm -Rf camera_photos
 #rm -Rf raw_photos
+rm -Rf tmp/
 
+[ -d tmp ] || mkdir tmp
 [ -d camera_photos ] || mkdir camera_photos
 [ -d raw_photos ] || mkdir raw_photos
 [ -d output_photos ] || mkdir output_photos
