@@ -38,7 +38,7 @@
 
 #include <common.hpp>
 #include <slog.hpp>
-#include "mkldnn/mkldnn_extension_ptr.hpp"
+//#include "mkldnn/mkldnn_extension_ptr.hpp"
 #include <ext_list.hpp>
 #include <opencv2/opencv.hpp>
 #include "opencv2/imgproc/imgproc.hpp"
@@ -87,7 +87,7 @@ Mat get_cropped(Mat input, Rect rectangle , int crop_size , int style){
 vector<pair<string, vector<float> > > read_text(){
     cout<< "Reading vectors of saved person"<<endl;
     vector<pair<string, vector<float> > > data;
-    string file="../vectors.txt";
+    string file="vectors.txt";
     string line;
     std::ifstream infile(file);
     int count;
@@ -285,22 +285,27 @@ void add_redo_rects_to_final(vector<Rect> *final_faces, vector<Rect> redo_rects,
 }
    
 
-int main(){
+int main(int argc,  char **argv){
+ if(argc != 2)
+ {
+   cout << "uses:" << endl << "exe test.mp4" << endl;
+   return 1;
+ }
 //-----------------------Read data from "vectors.txt"----------------------
     vector<pair<string, vector<float> > > data=read_text();
     cout<< "Finished Reading"<<endl;
     FaceDetectionClass FaceDetection;
     FaceRecognitionClass FaceRecognition;
-    PersonDetectionClass PersonDetection;
+    //PersonDetectionClass PersonDetection;
 
 //-----------------------Initialize Detections -----------------------------
-    FaceRecognition.initialize("../model/20180402-114759.xml");
+    if (FaceRecognition.initialize("model/20180402-114759.xml")) { cout << "exitting"; exit(1);}
     FaceDetection.initialize();
-    PersonDetection.initialize("/opt/intel/computer_vision_sdk/deployment_tools/intel_models/face-person-detection-retail-0002/FP32/face-person-detection-retail-0002.xml");
+    //PersonDetection.initialize("/opt/intel/openvino/deployment_tools/intel_models/face-person-detection-retail-0002/FP32/face-person-detection-retail-0002.xml");
 
 
 //----------------------------------Get video source -----------------------------
-    VideoCapture cap(0); 
+    VideoCapture cap(argv[1]); 
         
           // Check if camera opened successfully
     if(!cap.isOpened()){
@@ -312,9 +317,9 @@ int main(){
     Mat frame;
     while (1){
         fps++;
-        cout<<fps<<endl;
-        //cap.read(frame);
-        frame= imread("/home/xiaojiang/Desktop/school.jpg");
+        cout<<"starting Frame:"<< fps<<endl;
+        cap >> frame;
+        //frame= imread("/home/xiaojiang/Desktop/school.jpg");
 
         if (frame.empty()){
             continue;
@@ -442,34 +447,47 @@ int main(){
 
 
 
-        //for (auto rect :detected_faces){
-          //      rectangle(frame, rect,Scalar(155,125,73), 2);         
-        //}
+        for (auto rect :detected_faces){
+          rectangle(frame, rect,Scalar(155,125,73), 2);         
+        }
 
-
+        cout << "Detected face:" << detected_faces.size() << endl;
 //----------------------------------------face recognition--------------------------------------
         set<string> recognized_person;
         vector<float> output_vector;
         pair<float, string> compare_result;
+        auto finx = 0;
         for (auto rect : final_faces){
             Mat cropped=get_cropped(frame, rect, 160 , 2);
+            //cout << "loading" << endl;
             FaceRecognition.load_frame(cropped);
+            //cout << "loaded" << endl;
             output_vector= FaceRecognition.do_infer();
+            //cout << "do_infe done" << endl;
+
             //-------------compare with the dataset, return the most possible person if any---
             compare_result=recognize(&data , output_vector);
+            cout << "FaceRecognition:cheking for face:" << finx  << " : [compare_result]"<< compare_result.first << ":" <<  compare_result.second  << endl;
             if (compare_result.second!="Unknown" 
                 && recognized_person.find(compare_result.second)==recognized_person.end())   {
                 recognized_person.insert(compare_result.second);
                 putText(frame, 
                     "Name : " + compare_result.second , 
                     cv::Point2f(rect.x,rect.y -15), 
-                    FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(73,255,167), 1, CV_AA); 
+                    FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar(73,255,167), 1, LINE_AA); 
                 putText(frame, 
                     "Value : " + to_string(compare_result.first) , 
                     cv::Point2f(rect.x, rect.y ), 
-                    FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(73,255,167), 1, CV_AA);  
+                    FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar(73,255,167), 1, LINE_AA);  
             }
+            imshow (" asdf", frame);
+            imshow ("recognising..", cropped);
+            waitKey(1000);
+
+            finx++;
         }
+
+        /*
         for (auto rect: sub_frame_rects) {
            rectangle(frame, rect, cv::Scalar(178,176,174), 1) ;
         }
@@ -483,33 +501,35 @@ int main(){
             putText(boundary_face_frame, 
                     to_string(i) , 
                     cv::Point2f(link.second.x + 5,link.second.y + 15), 
-                    FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(73,255,167), 1, CV_AA); 
+                    FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar(73,255,167), 1, LINE_AA); 
             rectangle(frame,link.first, cv::Scalar(249,84,109),1);
             putText(frame, 
                     to_string(i) , 
                     cv::Point2f(link.first.x + 5, link.first.y + 15), 
-                    FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(73,255,167), 1, CV_AA); 
+                    FONT_HERSHEY_COMPLEX_SMALL, 0.8, Scalar(73,255,167), 1, LINE_AA); 
             i++;
         }
+
 
         for (auto result : FaceDetection.results){
                 //cout << r.confidence <<endl;   
             if (result.confidence>0.1) {
                 rectangle(boundary_face_frame,result.location, cv::Scalar(0,0,255),1);
             }
-
         }        
 
         for (auto rect : extra_faces){
             rectangle(frame,rect, cv::Scalar(0,0,255),1);           
         }
-        imwrite("/home/xiaojiang/Desktop/step5-2.jpg",frame);
+        */
+
+        imwrite("step5-2.jpg",frame);
         imshow (" asdf", frame);
         waitKey(1);
 
 
-        imwrite("/home/xiaojiang/Desktop/step5-1.jpg",boundary_face_frame);
-        imshow("bf",boundary_face_frame);
+        imwrite("step5-1.jpg",boundary_face_frame);
+        //imshow("bf",boundary_face_frame);
 
         waitKey(1);
     }

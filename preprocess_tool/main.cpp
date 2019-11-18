@@ -37,7 +37,7 @@
 
 #include <common.hpp>
 #include <slog.hpp>
-#include "mkldnn/mkldnn_extension_ptr.hpp"
+//#include "mkldnn/mkldnn_extension_ptr.hpp"
 #include <ext_list.hpp>
 #include <opencv2/opencv.hpp>
 #include "opencv2/imgproc/imgproc.hpp"
@@ -91,7 +91,7 @@ int main(){
 
 
 //------------------reading images of people---------------------------------
-    string directory_path="../raw_photos";
+    string directory_path="raw_photos";
     std::map<string, vector <string>> photo_info;  //key: class name //value: image paths
     vector <string> input_names;
     cout << "Parsing Directory: " << directory_path << endl;
@@ -132,14 +132,14 @@ int main(){
     Mat frame;
     Result the_result;
     string output_image_path;
-    string output_path="../output_photos/";
+    string output_path="output_photos/";
 
-    FaceRecognition.initialize("../model/20180402-114759.xml");
+    FaceRecognition.initialize("model/20180402-114759.xml");
 
 
     vector <float > output_vector;
     ofstream output_file; 
-    output_file.open("../vectors.txt", std::ofstream::trunc);
+    output_file.open("vectors.txt", std::ofstream::trunc);
     if (!output_file.is_open())
     {
         cout<< "unable to open vectors.txt"<<endl;
@@ -150,7 +150,7 @@ int main(){
        //second : all paths to this person's photo 
     for (auto info : photo_info)
     {
-        //cout<< info.first <<endl;
+        cout<< info.first <<endl;
         const int dir_err = mkdir((output_path + info.first).c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         if (-1 == dir_err)
         {
@@ -159,7 +159,9 @@ int main(){
         } 
         output_file << info.first << "\n" << info.second.size() << "\n";
         for (auto p : info.second){
+            cout << "Reading:" << directory_path + "/" + info.first + "/" + p << endl;
             frame = imread (directory_path + "/" + info.first + "/" + p);
+            if (frame.empty()) continue;
             FaceDetection.enqueue(frame);
             FaceDetection.submitRequest();
             FaceDetection.wait();
@@ -169,7 +171,8 @@ int main(){
             }
             else continue;
             Mat cropped=get_cropped(frame, the_result.location, 160 , 2);
-            output_image_path="../output_photos/" + info.first + "/" + fileNameNoExt(p) + "_cropped.jpg"  ;
+            output_image_path="output_photos/" + info.first + "/" + fileNameNoExt(p) + "_cropped.jpg"  ;
+            cout << "Writing:" << output_image_path << endl;
             imwrite( output_image_path, cropped );
 
             FaceRecognition.load_frame(cropped);

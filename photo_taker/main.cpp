@@ -24,7 +24,7 @@
 #include <string.h>
 #include <fstream>
 #include <map>
-
+#include <iomanip>
 #include <sstream>
 
 #include <common.hpp>
@@ -38,11 +38,16 @@
 using namespace cv;
 
 
-int main(){
+int main(int argc, char *argv[]){
 
-    VideoCapture cap(0); 
+    if(argc != 2)
+    {
+      cout << "uses::" << endl << "photo_taker videofile.mp4" << endl;
+      return -1; 
+    }
+    VideoCapture cap(argv[1]); 
         
-          // Check if camera opened successfully
+    // Check if camera opened successfully
     if(!cap.isOpened()){
         cout << "Error opening video stream or file" << endl;
         return -1;
@@ -52,7 +57,9 @@ int main(){
     char usr[50];
     string in;
 
-    cout << "---Hit ESC to take a photo ----" <<endl;
+    cout << "---Hit ESC take photo.. exit otherwise ----" <<endl;
+    cout << "Initally it will take photo from 1st 100 frmaes" << endl;
+    auto frm = 0;
     while(1){
      
         // Capture frame-by-frame
@@ -67,17 +74,27 @@ int main(){
         if (!frame.empty())
         imshow( "Frame", frame );
 
-        // Press  ESC on keyboard to exit
+        // Press  'q' keyboard to exit
         char c=(char)waitKey(50);
-        if(c==27) {
+        if(c==27 || frm++< 100)
+        {
             cout<< "saving photo "<<endl;
             auto t = std::time(nullptr);
             auto tm = *std::localtime(&t);
-            std::ostringstream oss;
-            oss << std::put_time(&tm, "%d-%m-%Y-%H-%M-%S");
-            auto str = oss.str();
-            imwrite("/home/xiaojiang/Desktop/webrtc-mcu-analytics-sdk/plugin/samples/face_recognition_plugin/camera_photos/"+str+".jpg",prev_frame);
+            //std::ostringstream oss;
+            //oss << std::put_time(&tm, "%d-%m-%Y-%H-%M-%S");
+            //auto str = oss.str();
+            time_t rawtime;
+            struct tm * timeinfo;
+            char buffer[80];
+            time (&rawtime);
+            timeinfo = localtime(&rawtime);
+            strftime(buffer,sizeof(buffer),"%d-%m-%Y %H:%M:%S",timeinfo);
+            std::string str(buffer);
+
+            imwrite("camera_photos/"+str+".jpg",prev_frame);
         }
+        else if (c == 'q') { break;}
         prev_frame = frame;
         frame = next_frame;
         next_frame = Mat();

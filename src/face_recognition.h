@@ -29,7 +29,7 @@ class FaceRecognitionClass
  		cv::Mat input_frame; 
  		float * input_buffer;
  		float * output_buffer;
- 		cv::Mat* output_frames ;
+ 		cv::Mat output_frames ;
  		cv::Mat frameInfer;
  		cv::Mat frameInfer_prewhitten;
 

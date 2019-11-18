@@ -73,7 +73,7 @@ cv::Mat prewhitten(cv::Mat input  ){
 }
 
 FaceRecognitionClass::~FaceRecognitionClass(){
-    delete [] output_frames;
+    //delete [] output_frames;
 }
 
 int FaceRecognitionClass::initialize(std::string modelfile){
@@ -81,6 +81,7 @@ int FaceRecognitionClass::initialize(std::string modelfile){
     //InferencePlugin plugin(dispatcher.getPluginByDevice("CPU")); 
     plugin=dispatcher.getPluginByDevice("CPU"); 
     cout<< "============Initialize FaceRecognition ================="<<endl;
+    cout<< "============model file:" << modelfile <<" ================="<<endl;
     try {
         networkReader.ReadNetwork(modelfile);
     }
@@ -132,11 +133,27 @@ int FaceRecognitionClass::initialize(std::string modelfile){
 
     for (auto &item : input_info) {
         auto input_data = item.second;
+
+
+        inputDims=input_data->getDims();
+        cout << "before chnaging inputDims=" << inputDims.size() << "=>";
+        for (int i=0; i<inputDims.size(); i++) {
+           cout << " "<< (int)inputDims[i] << " ";
+        }
+        cout << endl;
+
         input_data->setPrecision(Precision::FP32);
         input_data->setLayout(Layout::NCHW);
+
         inputDims=input_data->getDims();
+        cout << "after chnaging  inputDims=" << inputDims.size() << "=>";
+        for (int i=0; i<inputDims.size(); i++) {
+            cout << " " <<  (int)inputDims[i] << " ";
+        }
+        cout << endl;
+
     }
-    cout << "inputDims=";
+    cout << "final inputDims=";
     for (int i=0; i<inputDims.size(); i++) {
         cout << (int)inputDims[i] << " ";
     }
@@ -153,11 +170,24 @@ int FaceRecognitionClass::initialize(std::string modelfile){
     InferenceEngine::SizeVector outputDims;
     for (auto &item : output_info) {
         auto output_data = item.second;
-        output_data->setPrecision(Precision::FP32);
-        output_data->setLayout(Layout::NCHW);
+
         outputDims=output_data->getDims();
+        cout << "before chnaging  outputDims=" << outputDims.size() << "=>";
+        for (int i=0; i<outputDims.size(); i++) {
+            cout << " " <<  (int)outputDims[i] << " ";
+        }
+        cout << endl;
+
+        output_data->setPrecision(Precision::FP32);
+        //output_data->setLayout(Layout::NCHW);
+        outputDims=output_data->getDims();
+        cout << "after chnaging  outputDims=" << outputDims.size() << "=>";
+        for (int i=0; i<outputDims.size(); i++) {
+            cout << " " <<  (int)outputDims[i] << " ";
+        }
+        cout << endl;
     }
-    cout << "outputDims=";
+    cout << "final outputDims=";
     for (int i=0; i<outputDims.size(); i++) {
         cout << (int)outputDims[i] << " ";
     }
@@ -200,15 +230,15 @@ int FaceRecognitionClass::initialize(std::string modelfile){
     }
 
     // get the output blob pointer location
-
-    output_buffer = NULL;
+ 	output_buffer = NULL;
     for (auto &item : output_info) {
         auto output_name = item.first;
         auto output = async_infer_request->GetBlob(output_name);
         output_buffer = output->buffer().as<PrecisionTrait<Precision::FP32>::value_type *>();
     }
 
-    output_frames = new Mat[1];
+    //output_frames = new Mat[1];
+
     cout<< "==========Sucessfully initialized face_recognition plugin==============="<<endl;
     return 0;
 }
@@ -228,22 +258,30 @@ void FaceRecognitionClass::load_frame(cv::Mat frame){
     else if ((output_width==input_width) && (output_height==input_height)) pipeline_type=2; //output is input resolution
 
     //open video output
+    //cout << "pipeline_type" << pipeline_type <<  endl;
+
     switch (pipeline_type)
-        {
+    {
         case 1: // Input frame is resized to infer resolution
-            resize(frame,output_frames[0], Size(infer_width, infer_height));
-            frameInfer=output_frames[0];
+            resize(frame,output_frames, Size(infer_width, infer_height));
+            frameInfer=output_frames;
             break;
         case 2: //output is input resolution
-            output_frames[0]=frame;
+            output_frames=frame;
             resize(frame, frameInfer, Size(infer_width, infer_height));
             break;
         default: //other cases -- resize for output and infer
+	    //std::cout << "output_frames" << frame.empty() << std::endl;
+	    if (!frame.empty())
+	    {
+	       output_frames = frame;
+	    }
+	    else {
+		std::cout << "image is not valid" << std::endl;
+	    }
             //resize(frame,output_frames[0], Size(output_width, output_height));
             resize(frame, frameInfer, Size(infer_width, infer_height));
-        }
-
-    //std::cout<<"output size"<< output_frames[0].rows<<std::endl;
+    }
     //std::cout<<"frameInfer input"<< frameInfer.rows<< "|"<<frameInfer.cols<<std::endl;
     auto input_channels = 3;  // channels for color format.  RGB=4   
     int input_size=76800; 
@@ -261,6 +299,7 @@ void FaceRecognitionClass::load_frame(cv::Mat frame){
             if (input_buffer==NULL){
                 cout<< "input_buffer problem"<<endl;
             }
+	    //cout << "input_buffer:"<<input_buffer << " ch: " << ch << " pixelnum " << pixelnum << "imgIdx" << imgIdx << ":"<< (float)frameInfer_prewhitten.at<cv::Vec3f>(pixelnum)[ch] << endl;
             input_buffer[(ch * channel_size) + pixelnum] = (float)frameInfer_prewhitten.at<cv::Vec3f>(pixelnum)[ch];                    
         }
     }  

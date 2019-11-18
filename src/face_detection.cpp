@@ -16,7 +16,7 @@
 
 #include <common.hpp>
 #include <slog.hpp>
-#include "mkldnn/mkldnn_extension_ptr.hpp"
+//#include "mkldnn/mkldnn_extension_ptr.hpp"
 #include <ext_list.hpp>
 #include <opencv2/opencv.hpp>
 #include "opencv2/imgproc/imgproc.hpp"
@@ -62,18 +62,18 @@ void FaceDetectionClass::initialize(){
     std::vector<std::pair<std::string, std::string>> cmdOptions;
 
     device_for_faceDetection="CPU";
-    path_to_faceDetection_model = "/opt/intel/computer_vision_sdk/deployment_tools/intel_models/face-detection-retail-0004/FP32/face-detection-retail-0004.xml";
+    path_to_faceDetection_model = "/root/openvino_models/ir/intel/face-detection-retail-0004/FP32/face-detection-retail-0004.xml";
     
     auto deviceName = device_for_faceDetection;
     auto networkName = path_to_faceDetection_model;
 
     //need to provide the absolute path to the trained model*
     InferencePlugin buffer_plugin = PluginDispatcher\
-      ({"/opt/intel/computer_vision_sdk_2018.3.323/deployment_tools/inference_engine/lib/ubuntu_16.04/intel64", ""})\
+      ({"/opt/intel/openvino/inference_engine/lib/intel64/", ""})\
       .getPluginByDevice(deviceName);
 
     //Print plugin version /
-    printPluginVersion(buffer_plugin, std::cout);
+    //printPluginVersion(buffer_plugin, std::cout);
 
     ///Load extensions for the CPU plugin 
     if ((deviceName.find(device_for_faceDetection) != std::string::npos)) {

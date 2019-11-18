@@ -120,7 +120,7 @@ struct FaceDetectionClass : BaseDetection {
 
 
     explicit FaceDetectionClass() : 
-      BaseDetection("/opt/intel/computer_vision_sdk_2018.3.323/deployment_tools/intel_models/face-detection-retail-0004/FP32/face-detection-retail-0004.xml"\
+      BaseDetection("/root/openvino_models/ir/intel/face-detection-retail-0004/FP32/face-detection-retail-0004.xml"\
       ,"Face Detection"
       , 1) {}
 
