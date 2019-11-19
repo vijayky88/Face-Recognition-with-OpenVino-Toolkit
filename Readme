@@ -1,3 +1,10 @@
+Hello,
+
+Please be noted : This is few quick steps taken for running in new version(R3). You might do in better way 
+All policies/rules/terms/conditions etc will remain same as it is with original contributer:
+https://github.com/MekkaSiekka/Face-Recognition-with-OpenVino-Toolkit
+Thanks!
+
 Todo:
 0. In cmake file, you should be able to comment out "server_plugin" executable. This is used for an outdated Intel video server and may cause issue during compilation. 
 1. install intel's OpenVino computational vision sdk from https://software.intel.com/en-us/openvino-toolkit
